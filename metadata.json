@@ -1,0 +1,6 @@
+{
+  "name": "VoiceClaw",
+  "description": "Deploy a custom AI voice agent in under 2 minutes. Business owners can configure welcome greetings, ingest business documents or URLs, and interact with agents in real-time.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
