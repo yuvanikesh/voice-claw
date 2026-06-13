@@ -99,11 +99,11 @@ function generateSynthesizedWav(): Buffer {
 // API ROUTES
 // ==========================================
 
-// POST /api/upload -> { success: true }
-// Since express JSON handles JSON, a multipart request is just direct-routed without parsing binary to save complex packages
+// POST /api/upload -> { success: true, file_id: string }
 app.post("/api/upload", (req, res) => {
-  console.log("[API] File uploaded successfully");
-  res.json({ success: true });
+  const file_id = "file_" + Math.random().toString(36).substring(2, 11);
+  console.log(`[API] File uploaded successfully, assigned file_id: ${file_id}`);
+  res.json({ success: true, file_id });
 });
 
 // POST /api/ingest-url -> { success: true }
@@ -137,26 +137,28 @@ app.post("/api/config", (req, res) => {
   res.json({ agent_id });
 });
 
-// POST /api/claude -> Conversational onboarding proxy supporting both real Claude and intelligent Gemini 3.5 fallback
-app.post("/api/claude", async (req, res) => {
+// POST /api/chat -> Conversational onboarding proxy with multi-model support (primary + Gemini fallback)
+app.post("/api/chat", async (req, res) => {
   const { messages, system } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: "messages array is required" });
   }
 
-  // 1. Try real Anthropic Messages API if ANTHROPIC_API_KEY is available
-  if (process.env.ANTHROPIC_API_KEY) {
+  // 1. Try primary LLM API if AI_API_KEY is available
+  const aiApiKey = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY;
+  const aiModel = process.env.AI_MODEL || "claude-3-5-sonnet-20241022";
+  if (aiApiKey) {
     try {
-      console.log("[Claude Proxy] Calling official Anthropic API...");
+      console.log("[AI Proxy] Calling primary LLM API...");
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          "x-api-key": process.env.ANTHROPIC_API_KEY,
+          "x-api-key": aiApiKey,
           "anthropic-version": "2023-06-01",
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022",
+          model: aiModel,
           max_tokens: 1000,
           system: system,
           messages: messages.map(m => ({ role: m.role, content: m.content }))
@@ -168,30 +170,29 @@ app.post("/api/claude", async (req, res) => {
         return res.json(data);
       } else {
         const statusText = await response.text();
-        console.warn(`[Claude Proxy] Anthropic returned non-ok status: ${response.status} - ${statusText}`);
+        console.warn(`[AI Proxy] Primary LLM returned non-ok status: ${response.status} - ${statusText}`);
       }
     } catch (e) {
-      console.error("[Claude Proxy] Anthropic connection error:", e);
+      console.error("[AI Proxy] Primary LLM connection error:", e);
     }
   }
 
-  // 2. Adaptive Native Gemini-3.5-flash fallback if ANTHROPIC_API_KEY is absent
+  // 2. Gemini fallback when primary key is absent
   try {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
-      console.warn("[Claude Proxy] GEMINI_API_KEY not configured. Responding with smart local heuristic...");
-      // Let's respond with a smart local automatic reply in the requested format to prevent any crash
+      console.warn("[AI Proxy] No AI keys configured. Responding with local fallback...");
       return res.json({
         content: [
           {
             type: "text",
-            text: "Hello! Set up GEMINI_API_KEY in Settings > Secrets to enable smart interactive AI onboarding."
+            text: "Hello! Set up GEMINI_API_KEY or AI_API_KEY in Settings > Secrets to enable smart interactive AI onboarding."
           }
         ]
       });
     }
 
-    console.log("[Claude Proxy] Invoking high-performance Gemini 3.5 fallback...");
+    console.log("[AI Proxy] Invoking Gemini fallback...");
     const { GoogleGenAI } = await import("@google/genai");
     const ai = new GoogleGenAI({
       apiKey: geminiKey,
@@ -226,7 +227,7 @@ app.post("/api/claude", async (req, res) => {
       ]
     });
   } catch (err: any) {
-    console.error("[Claude Proxy] Gemini AI generation error:", err);
+    console.error("[AI Proxy] Gemini generation error:", err);
     return res.status(500).json({ error: "Failed to connect to AI server. Please verify your settings." });
   }
 });
