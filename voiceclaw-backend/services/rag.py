@@ -137,15 +137,17 @@ async def query_knowledge_base(agent_id: str, query_text: str, history: list[dic
         detected_lang_name = lang_name_map.get(source_lang, "")
         if source_lang and source_lang != "en-IN" and detected_lang_name:
             system_prompt += (
-                f"\n\nIMPORTANT LANGUAGE INSTRUCTION: The user is speaking in {detected_lang_name} ({source_lang}). "
-                f"You MUST respond in {detected_lang_name}. Match the user's language exactly. "
-                f"If the user mixes {detected_lang_name} with English (code-mixing), respond in the same mixed style. "
-                f"Do NOT translate your response to English."
+                f"\n\nIMPORTANT LANGUAGE INSTRUCTION: The user's CURRENT message is in {detected_lang_name} ({source_lang}). "
+                f"You MUST respond in {detected_lang_name} — even if previous messages in the conversation were in a different language. "
+                f"The user may switch languages mid-conversation; always match their LATEST language. "
+                f"If the user mixes {detected_lang_name} with English (code-mixing/code-switching), respond in the same mixed style. "
+                f"Do NOT translate your response to English. Keep all factual context from earlier turns."
             )
         elif source_lang and source_lang != "en-IN":
             system_prompt += (
-                f"\n\nIMPORTANT LANGUAGE INSTRUCTION: The user is speaking in language code '{source_lang}'. "
-                f"Respond in the SAME language as the user. Do NOT translate to English."
+                f"\n\nIMPORTANT LANGUAGE INSTRUCTION: The user's CURRENT message is in language code '{source_lang}'. "
+                f"Respond in the SAME language as this message, even if earlier turns were in a different language. "
+                f"Do NOT translate to English. Keep all factual context from earlier turns."
             )
 
         system_prompt += f"\n\nContext:\n{context}"

@@ -949,15 +949,16 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
 
       // 5. AI enrichment — append one natural follow-up question
       try {
+        const langHint = language !== "en-IN" ? ` The user is speaking in ${language}. You MUST respond in that same language, not English.` : "";
         const enrichRes = await fetch(getApiUrl("/api/chat"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            system: `You are a voice assistant for ${agentInfo?.business_name || "this business"}. Take the answer and append ONE short natural follow-up question. Max 2 sentences. Respond in the same language as the answer — if Telugu respond in Telugu, if Hindi respond in Hindi. IMPORTANT: If the answer contains any XML tags like <action .../>, preserve them exactly as-is at the end.`,
+            system: `You are a voice assistant for ${agentInfo?.business_name || "this business"}. Take the answer and append ONE short natural follow-up question. Max 2 sentences.${langHint} Respond in the EXACT same language as the answer text. IMPORTANT: If the answer contains any XML tags like <action .../>, preserve them exactly as-is at the end.`,
             messages: [
               {
                 role: "user",
-                content: `Answer: ${answer_text}. Append a follow-up question.`,
+                content: `Answer: ${answer_text}. Append a follow-up question in the same language.`,
               },
             ],
           }),
