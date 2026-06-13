@@ -11,3 +11,5 @@ firecrawl-py
 pydantic
 pydantic-settings
 pypdf
+google-genai
+

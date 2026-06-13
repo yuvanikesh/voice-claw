@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     SARVAM_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
     FIRECRAWL_API_KEY: str = ""
     DATABASE_URL: str = "sqlite:///./voiceclaw.db"
     CHROMA_PERSIST_DIR: str = "./chroma_db"
