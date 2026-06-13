@@ -15,11 +15,18 @@ class Settings(BaseSettings):
 
     # ── Sarvam API ──
     SARVAM_BASE_URL: str = "https://api.sarvam.ai"
-    SARVAM_STT_MODEL: str = "saarika:v2"
-    SARVAM_TTS_MODEL: str = "bulbul:v2"
+    SARVAM_STT_MODEL: str = "saarika:v2.5"
+    SARVAM_TTS_MODEL: str = "bulbul:v3"
     SARVAM_TTS_SPEAKER: str = "meera"
-    SARVAM_TRANSLATE_MODEL: str = "mayura:v1"
-    SARVAM_CHAT_MODEL: str = "sarvam-m"
+    SARVAM_TTS_PACE: float = 1.0  # Speed: 0.5 to 2.0
+    SARVAM_TTS_TEMPERATURE: float = 0.6  # Expressiveness: 0.01 to 1.0 (v3 only)
+    SARVAM_TTS_SAMPLE_RATE: int = 22050  # Audio quality (Hz)
+    SARVAM_TTS_ENABLE_CACHE: bool = False  # Cache identical requests (beta)
+    SARVAM_TRANSLATE_MODEL: str = "mayura:v1"  # Options: mayura:v1, sarvam-translate:v1
+    SARVAM_TRANSLATE_GENDER: str = ""  # Male or Female (optional)
+    SARVAM_TRANSLATE_MODE: str = ""  # formal, modern-colloquial, classic-colloquial, code-mixed
+    SARVAM_TRANSLATE_NUMERALS: str = "international"  # international or native
+    SARVAM_CHAT_MODEL: str = "sarvam-30b"  # Options: sarvam-30b, sarvam-105b
     SARVAM_API_TIMEOUT: float = 30.0
     SARVAM_LID_TIMEOUT: float = 15.0
     SARVAM_DOC_TIMEOUT: float = 60.0
