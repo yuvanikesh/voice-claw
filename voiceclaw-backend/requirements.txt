@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+chromadb
+sentence-transformers
+sqlalchemy
+aiosqlite
+python-dotenv
+firecrawl-py
+pydantic
+pydantic-settings
+pypdf
