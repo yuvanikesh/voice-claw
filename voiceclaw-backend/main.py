@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
     logger.info("VoiceClaw Backend shutting down...")
 
 app = FastAPI(
-    title="VoiceClaw API",
-    version="1.0.0",
+    title=settings.APP_TITLE,
+    version=settings.APP_VERSION,
     lifespan=lifespan
 )
 
@@ -62,5 +62,5 @@ app.include_router(config.router, prefix="/api", tags=["config"])
 async def health_check():
     return {
         "status": "ok",
-        "version": "1.0.0"
+        "version": settings.APP_VERSION
     }

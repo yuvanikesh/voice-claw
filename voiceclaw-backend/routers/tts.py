@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
+from config import settings
 from services import sarvam
 
 logger = logging.getLogger("tts_router")
@@ -32,7 +33,7 @@ async def text_to_speech_stream(
         audio_bytes = await sarvam.text_to_speech(
             text=request.text,
             target_language_code=target_lang,
-            speaker="meera"
+            speaker=settings.SARVAM_TTS_SPEAKER
         )
         
         return StreamingResponse(

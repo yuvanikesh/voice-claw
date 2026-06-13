@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
+from config import settings
 from services import sarvam
 
 logger = logging.getLogger("stt_router")
@@ -20,7 +21,7 @@ async def speech_to_text(
             raise HTTPException(status_code=400, detail={"error": "Invalid file", "detail": "Audio file is empty"})
             
         # Parse format from filename or content type
-        audio_format = "webm"
+        audio_format = settings.DEFAULT_AUDIO_FORMAT
         filename = audio.filename or ""
         if "." in filename:
             audio_format = filename.split(".")[-1]
@@ -32,7 +33,7 @@ async def speech_to_text(
         
         return {
             "text": result.get("transcript", ""),
-            "source_lang": result.get("source_language_code", "en-IN"),
+            "source_lang": result.get("source_language_code", settings.DEFAULT_LANGUAGE_CODE),
             "agent_id": agent_id
         }
     except sarvam.SarvamAPIError as e:

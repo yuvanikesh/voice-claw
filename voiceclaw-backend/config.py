@@ -2,13 +2,68 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # ── API Keys ──
     SARVAM_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     FIRECRAWL_API_KEY: str = ""
+
+    # ── Infrastructure ──
     DATABASE_URL: str = "sqlite:///./voiceclaw.db"
     CHROMA_PERSIST_DIR: str = "./chroma_db"
     UPLOAD_DIR: str = "./uploads"
     PORT: int = 8000
+
+    # ── Sarvam API ──
+    SARVAM_BASE_URL: str = "https://api.sarvam.ai"
+    SARVAM_STT_MODEL: str = "saarika:v2"
+    SARVAM_TTS_MODEL: str = "bulbul:v2"
+    SARVAM_TTS_SPEAKER: str = "meera"
+    SARVAM_TRANSLATE_MODEL: str = "mayura:v1"
+    SARVAM_CHAT_MODEL: str = "sarvam-m"
+    SARVAM_API_TIMEOUT: float = 30.0
+    SARVAM_LID_TIMEOUT: float = 15.0
+    SARVAM_DOC_TIMEOUT: float = 60.0
+    SARVAM_DOC_POLL_INTERVAL: float = 3.0
+    SARVAM_DOC_MAX_POLLS: int = 60
+    SARVAM_DOC_OUTPUT_FORMAT: str = "md"
+    SARVAM_DOC_PAGE_LIMIT: int = 10
+
+    # ── Gemini ──
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+
+    # ── Embeddings ──
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+
+    # ── Chunking ──
+    CHUNK_SIZE: int = 500
+    CHUNK_OVERLAP: int = 50
+
+    # ── RAG ──
+    RAG_TOP_K: int = 4
+    RAG_MAX_TOKENS: int = 200
+    RAG_TEMPERATURE: float = 0.3
+    RAG_HISTORY_LIMIT: int = 4
+    RAG_SYSTEM_PROMPT_TEMPLATE: str = (
+        "You are a helpful voice assistant for {business_name}. "
+        "Answer using only the context below. Be concise — max 2 sentences. "
+        "Never make up information not in the context."
+    )
+    RAG_NO_CONTEXT_MESSAGE: str = "No background information available."
+
+    # ── Language defaults ──
+    DEFAULT_LANGUAGE_CODE: str = "en-IN"
+    DEFAULT_AUDIO_FORMAT: str = "webm"
+
+    # ── Upload limits ──
+    MAX_UPLOAD_SIZE_MB: int = 20
+
+    # ── Vector store ──
+    COLLECTION_PREFIX: str = "agent_"
+    TEMP_COLLECTION_PREFIX: str = "temp_"
+
+    # ── App metadata ──
+    APP_TITLE: str = "VoiceClaw API"
+    APP_VERSION: str = "1.0.0"
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), ".env"),

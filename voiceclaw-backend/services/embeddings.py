@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from sentence_transformers import SentenceTransformer
+from config import settings
 
 logger = logging.getLogger("embeddings_service")
 
@@ -10,8 +11,9 @@ _model = None
 def get_model():
     global _model
     if _model is None:
-        logger.info("Initializing SentenceTransformer model 'all-MiniLM-L6-v2'...")
-        _model = SentenceTransformer('all-MiniLM-L6-v2')
+        model_name = settings.EMBEDDING_MODEL
+        logger.info(f"Initializing SentenceTransformer model '{model_name}'...")
+        _model = SentenceTransformer(model_name)
     return _model
 
 def sync_encode(chunks: list[str]) -> list[list[float]]:

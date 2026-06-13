@@ -5,7 +5,11 @@ from config import settings
 
 logger = logging.getLogger("firecrawl_service")
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+def chunk_text(text: str, chunk_size: int = None, overlap: int = None) -> list[str]:
+    if chunk_size is None:
+        chunk_size = settings.CHUNK_SIZE
+    if overlap is None:
+        overlap = settings.CHUNK_OVERLAP
     chunks = []
     if not text:
         return chunks

@@ -10,8 +10,10 @@ class SarvamAPIError(Exception):
         super().__init__(message)
         self.detail = detail
 
-async def speech_to_text_translate(audio_bytes: bytes, audio_format: str = "webm") -> dict:
-    url = "https://api.sarvam.ai/speech-to-text-translate"
+async def speech_to_text_translate(audio_bytes: bytes, audio_format: str = None) -> dict:
+    if audio_format is None:
+        audio_format = settings.DEFAULT_AUDIO_FORMAT
+    url = f"{settings.SARVAM_BASE_URL}/speech-to-text-translate"
     headers = {
         "API-Subscription-Key": settings.SARVAM_API_KEY
     }
@@ -19,11 +21,11 @@ async def speech_to_text_translate(audio_bytes: bytes, audio_format: str = "webm
         "file": (f"audio.{audio_format}", audio_bytes, f"audio/{audio_format}")
     }
     data = {
-        "model": "saarika:v2"
+        "model": settings.SARVAM_STT_MODEL
     }
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=settings.SARVAM_API_TIMEOUT) as client:
             response = await client.post(url, headers=headers, files=files, data=data)
             if response.status_code != 200:
                 raise SarvamAPIError(f"Sarvam STT API returned status {response.status_code}", response.text)
@@ -40,8 +42,10 @@ async def speech_to_text_translate(audio_bytes: bytes, audio_format: str = "webm
         logger.error(f"Unexpected error in speech_to_text_translate: {e}")
         raise SarvamAPIError("Unexpected error calling Sarvam STT API", str(e))
 
-async def text_to_speech(text: str, target_language_code: str, speaker: str = "meera") -> bytes:
-    url = "https://api.sarvam.ai/text-to-speech"
+async def text_to_speech(text: str, target_language_code: str, speaker: str = None) -> bytes:
+    if speaker is None:
+        speaker = settings.SARVAM_TTS_SPEAKER
+    url = f"{settings.SARVAM_BASE_URL}/text-to-speech"
     headers = {
         "API-Subscription-Key": settings.SARVAM_API_KEY,
         "Content-Type": "application/json"
@@ -50,12 +54,12 @@ async def text_to_speech(text: str, target_language_code: str, speaker: str = "m
         "inputs": [text],
         "target_language_code": target_language_code,
         "speaker": speaker,
-        "model": "bulbul:v2",
+        "model": settings.SARVAM_TTS_MODEL,
         "enable_preprocessing": True
     }
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=settings.SARVAM_API_TIMEOUT) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code != 200:
                 raise SarvamAPIError(f"Sarvam TTS API returned status {response.status_code}", response.text)
@@ -77,7 +81,7 @@ async def text_to_speech(text: str, target_language_code: str, speaker: str = "m
         raise SarvamAPIError("Unexpected error calling Sarvam TTS API", str(e))
 
 async def translate_text(text: str, source_language_code: str, target_language_code: str) -> str:
-    url = "https://api.sarvam.ai/translate"
+    url = f"{settings.SARVAM_BASE_URL}/translate"
     headers = {
         "API-Subscription-Key": settings.SARVAM_API_KEY,
         "Content-Type": "application/json"
@@ -86,11 +90,11 @@ async def translate_text(text: str, source_language_code: str, target_language_c
         "input": text,
         "source_language_code": source_language_code,
         "target_language_code": target_language_code,
-        "model": "mayura:v1"
+        "model": settings.SARVAM_TRANSLATE_MODEL
     }
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=settings.SARVAM_API_TIMEOUT) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code != 200:
                 raise SarvamAPIError(f"Sarvam Translate API returned status {response.status_code}", response.text)
@@ -115,7 +119,7 @@ async def translate_text(text: str, source_language_code: str, target_language_c
         raise SarvamAPIError("Unexpected error calling Sarvam Translate API", str(e))
 
 async def identify_language(text: str) -> str:
-    url = "https://api.sarvam.ai/text-lid"
+    url = f"{settings.SARVAM_BASE_URL}/text-lid"
     headers = {
         "API-Subscription-Key": settings.SARVAM_API_KEY,
         "Content-Type": "application/json"
@@ -125,7 +129,7 @@ async def identify_language(text: str) -> str:
     }
     
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=settings.SARVAM_LID_TIMEOUT) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code != 200:
                 raise SarvamAPIError(f"Sarvam LID API returned status {response.status_code}", response.text)
@@ -138,7 +142,7 @@ async def identify_language(text: str) -> str:
                     lang_code = langs[0].get("language_code", "")
             
             if not lang_code:
-                lang_code = "en-IN"
+                lang_code = settings.DEFAULT_LANGUAGE_CODE
             
             return lang_code
     except httpx.HTTPError as e:
