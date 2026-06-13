@@ -26,10 +26,31 @@ async def text_to_speech_stream(
 ):
     try:
         # Standardize source language to match Sarvam target_language_code format (e.g. hi-IN)
-        target_lang = request.source_lang
-        # If it's a simple two-letter code, append -IN (e.g. te -> te-IN)
-        if len(target_lang) == 2:
+        target_lang = request.source_lang.strip()
+
+        # Valid Sarvam TTS language codes
+        valid_codes = {
+            "as-IN", "bn-IN", "brx-IN", "doi-IN", "en-IN", "gu-IN", "hi-IN",
+            "kn-IN", "kok-IN", "ks-IN", "mai-IN", "ml-IN", "mni-IN", "mr-IN",
+            "ne-IN", "od-IN", "pa-IN", "sa-IN", "sat-IN", "sd-IN", "ta-IN",
+            "te-IN", "ur-IN",
+        }
+
+        if target_lang in valid_codes:
+            pass  # already valid
+        elif len(target_lang) == 2:
+            # Simple two-letter code: append -IN (e.g. te -> te-IN)
             target_lang = f"{target_lang}-IN"
+        elif "-" in target_lang:
+            # Convert non-IN locales like en-US -> en-IN
+            lang_prefix = target_lang.split("-")[0]
+            target_lang = f"{lang_prefix}-IN"
+        else:
+            target_lang = "en-IN"  # fallback
+
+        # Final safety check
+        if target_lang not in valid_codes:
+            target_lang = "en-IN"
 
         # Look up agent to get dict_id (pronunciation dictionary)
         dict_id = None
