@@ -21,7 +21,7 @@ jobs:
 
       # 1. Log in to Azure CLI using a Service Principal secret
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
