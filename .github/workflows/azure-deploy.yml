@@ -1,0 +1,61 @@
+name: Build and Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger from the Actions tab
+
+env:
+  AZURE_WEBAPP_NAME: "voiceclaw-app" # Set this to your Web App name
+  ACR_NAME: "voiceclawregistry"       # Set this to your Azure Container Registry name
+  IMAGE_NAME: "voiceclaw"
+  RESOURCE_GROUP: "voiceclaw-india-rg"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # 1. Log in to Azure CLI using a Service Principal secret
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 2. Log in to Azure Container Registry
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      # 3. Build and push Docker image
+      - name: Build and Push Docker Image
+        run: |
+          ACR_LOGIN_SERVER=$(az acr show --name ${{ env.ACR_NAME }} --query loginServer --output tsv)
+          IMAGE_TAG=${{ github.sha }}
+          
+          docker build -t $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:$IMAGE_TAG -t $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest .
+          docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:$IMAGE_TAG
+          docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+
+      # 4. Deploy the Docker container image to Azure App Service
+      - name: Deploy Container to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: '${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest'
+
+      # 5. Configure App Settings and Enable Storage Persistence
+      - name: Configure App Service Settings
+        run: |
+          az webapp config appsettings set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings \
+            WEBSITES_PORT=3000 \
+            WEBSITES_ENABLE_APP_SERVICE_STORAGE=true \
+            DATABASE_URL="sqlite:////home/voiceclaw.db" \
+            CHROMA_PERSIST_DIR="/home/chroma_db" \
+            UPLOAD_DIR="/home/uploads" \
+            NODE_ENV=production \
+            BACKEND_URL="http://127.0.0.1:8000" \
+            PORT=3000
