@@ -77,6 +77,15 @@ interface ActionCard {
   color: string;
 }
 
+interface CustomIntegration {
+  id: string;
+  type: string;
+  name: string;
+  apiKey: string;
+  property: string;
+  isConnected: boolean;
+}
+
 // ─── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
 
@@ -137,6 +146,46 @@ export default function App() {
   const [isHubspotConnected, setIsHubspotConnected] = useState(false);
   const [hubspotApiKey, setHubspotApiKey] = useState("");
   const [showConfigFor, setShowConfigFor] = useState<string | null>(null);
+
+  const [customIntegrations, setCustomIntegrations] = useState<CustomIntegration[]>([]);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customType, setCustomType] = useState("Salesforce");
+  const [customNameInput, setCustomNameInput] = useState("");
+  const [customApiKeyInput, setCustomApiKeyInput] = useState("");
+  const [customPropertyInput, setCustomPropertyInput] = useState("");
+
+  const resetCustomForm = () => {
+    setCustomType("Salesforce");
+    setCustomNameInput("Salesforce");
+    setCustomApiKeyInput("");
+    setCustomPropertyInput("");
+  };
+
+  const handleAddCustomIntegration = () => {
+    const name = customNameInput.trim();
+    if (!name) {
+      showToast("Please enter an integration name.", "error");
+      return;
+    }
+    if (!customApiKeyInput.trim()) {
+      showToast("Please enter an API Key.", "error");
+      return;
+    }
+
+    const newIntegration: CustomIntegration = {
+      id: `custom_${Date.now()}`,
+      type: customType,
+      name,
+      apiKey: customApiKeyInput.trim(),
+      property: customPropertyInput.trim(),
+      isConnected: true,
+    };
+
+    setCustomIntegrations((prev) => [...prev, newIntegration]);
+    setShowCustomForm(false);
+    resetCustomForm();
+    showToast(`${name} integration connected!`, "success");
+  };
 
   // Fade animation keys — incrementing forces React to remount the element,
   // replaying the CSS keyframe animation on each field update.
@@ -931,6 +980,9 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
       if (isTwilioConnected) enabled_connectors.push("twilio");
       if (isShopifyConnected) enabled_connectors.push("shopify");
       if (isHubspotConnected) enabled_connectors.push("hubspot");
+      customIntegrations.forEach(c => {
+        if (c.isConnected) enabled_connectors.push(c.name.toLowerCase());
+      });
 
       // 4. Query RAG
       const qRes = await fetch(getApiUrl("/api/query"), {
@@ -1794,11 +1846,164 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                     )}
                   </div>
 
-                  {/* ─── Add More Connector CTA ────────────────────────────── */}
-                  <button className="w-full rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-400 py-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-all cursor-pointer group">
-                    <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-                    Add Custom Integration
-                  </button>
+                  {/* Custom Integrations List */}
+                  {customIntegrations.map((integration) => {
+                    const isExpanded = showConfigFor === integration.id;
+                    return (
+                      <div key={integration.id} className={`rounded-xl border transition-all duration-200 ${integration.isConnected ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                        <div className="flex items-center justify-between px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${integration.isConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                              <Settings className="w-4.5 h-4.5" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-semibold text-slate-800">{integration.name}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{integration.type} connection</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-1.5 h-1.5 rounded-full ${integration.isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-300'}`} />
+                            <button
+                              onClick={() => {
+                                setCustomIntegrations(prev => prev.map(c => c.id === integration.id ? { ...c, isConnected: !c.isConnected } : c));
+                                if (!integration.isConnected) {
+                                  setShowConfigFor(integration.id);
+                                } else {
+                                  if (showConfigFor === integration.id) setShowConfigFor(null);
+                                }
+                              }}
+                              className={`relative w-10 h-[22px] rounded-full transition-colors duration-200 cursor-pointer ${integration.isConnected ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                            >
+                              <span className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${integration.isConnected ? 'translate-x-[18px]' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                        {isExpanded && integration.isConnected && (
+                          <div className="px-4 pb-4 pt-1 border-t border-emerald-100 space-y-3">
+                            {integration.property && (
+                              <div>
+                                <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block mb-0.5">Property / URL</label>
+                                <p className="text-xs text-slate-600 truncate">{integration.property}</p>
+                              </div>
+                            )}
+                            <div>
+                              <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block mb-0.5">API Key</label>
+                              <p className="text-xs text-slate-600 font-mono">••••••••••••••••</p>
+                            </div>
+                            <div className="flex justify-end pt-1">
+                              <button
+                                onClick={() => {
+                                  setCustomIntegrations(prev => prev.filter(c => c.id !== integration.id));
+                                  if (showConfigFor === integration.id) setShowConfigFor(null);
+                                  showToast(`${integration.name} removed.`, "info");
+                                }}
+                                className="px-2.5 py-1 text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-100 rounded-md hover:bg-rose-100 transition-colors cursor-pointer"
+                              >
+                                Disconnect
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Add Custom Integration Form */}
+                  {showCustomForm ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3.5 transition-all text-left">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Configure Custom Integration</span>
+                        <button
+                          onClick={() => { setShowCustomForm(false); resetCustomForm(); }}
+                          className="text-xs font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      {/* Dropdown Selector */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">Integration Type</label>
+                        <select
+                          value={customType}
+                          onChange={(e) => {
+                            setCustomType(e.target.value);
+                            if (e.target.value !== "Other") {
+                              setCustomNameInput(e.target.value);
+                            } else {
+                              setCustomNameInput("");
+                            }
+                          }}
+                          className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                        >
+                          <option value="Salesforce">Salesforce</option>
+                          <option value="Zoho CRM">Zoho CRM</option>
+                          <option value="Zendesk">Zendesk</option>
+                          <option value="Slack">Slack</option>
+                          <option value="Razorpay">Razorpay</option>
+                          <option value="Mailchimp">Mailchimp</option>
+                          <option value="Other">Other (Custom Name)</option>
+                        </select>
+                      </div>
+
+                      {/* Custom Name (if Other) */}
+                      {customType === "Other" && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">Integration Name</label>
+                          <input
+                            type="text"
+                            value={customNameInput}
+                            onChange={(e) => setCustomNameInput(e.target.value)}
+                            placeholder="e.g. Jira, Stripe"
+                            className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                          />
+                        </div>
+                      )}
+
+                      {/* Property Input */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">Endpoint URL / Property</label>
+                        <input
+                          type="text"
+                          value={customPropertyInput}
+                          onChange={(e) => setCustomPropertyInput(e.target.value)}
+                          placeholder="e.g. https://api.mybusiness.com or workspace-name"
+                          className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                        />
+                      </div>
+
+                      {/* API Key Input */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block">API Key / Secret Token</label>
+                        <input
+                          type="password"
+                          value={customApiKeyInput}
+                          onChange={(e) => setCustomApiKeyInput(e.target.value)}
+                          placeholder="sk-xxxxxxxxxxxxxxxx"
+                          className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleAddCustomIntegration}
+                        className="w-full py-2 bg-[#0f0f0f] hover:bg-black text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                      >
+                        Add Integration
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setShowCustomForm(true);
+                        setCustomType("Salesforce");
+                        setCustomNameInput("Salesforce");
+                      }}
+                      className="w-full rounded-xl border-2 border-dashed border-slate-200 hover:border-slate-400 py-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-all cursor-pointer group"
+                    >
+                      <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                      Add Custom Integration
+                    </button>
+                  )}
                 </div>
 
                 {/* Bottom status bar */}
@@ -1806,7 +2011,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-slate-400">Active connectors</span>
                     <span className="font-bold text-slate-700">
-                      {[isCalendarConnected, isTwilioConnected, isShopifyConnected, isHubspotConnected].filter(Boolean).length} / 4
+                      {[isCalendarConnected, isTwilioConnected, isShopifyConnected, isHubspotConnected].filter(Boolean).length + customIntegrations.filter(c => c.isConnected).length} / {4 + customIntegrations.length}
                     </span>
                   </div>
                 </div>
