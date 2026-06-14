@@ -30,6 +30,8 @@ import {
   Sliders,
   MessageSquare,
   Users,
+  Menu,
+  History,
 } from "lucide-react";
 
 // ─── API URL HELPER ────────────────────────────────────────────────────────────
@@ -135,6 +137,123 @@ export default function App() {
   const [primaryLanguage, setPrimaryLanguage] = useState("");
   const [topFaqs, setTopFaqs] = useState<string[]>([]);
   const [restrictions, setRestrictions] = useState("");
+
+  // History Sidebar & Previous Sessions
+  const [isHistorySidebarExpanded, setIsHistorySidebarExpanded] = useState(true);
+  const [chatSessions, setChatSessions] = useState<any[]>([
+    {
+      id: "delhi-dental",
+      businessName: "Delhi Dental Clinic",
+      businessType: "Dental Clinic",
+      primaryLanguage: "Hindi & English",
+      greeting: "Namaste, welcome to Delhi Dental Clinic. How can I help you book an appointment today?",
+      topFaqs: ["How to book an appointment?", "What are the timings?", "Do you accept insurance?"],
+      restrictions: "Never give medical advice. Do not mention pricing for surgeries.",
+      date: "Jun 12, 2026",
+      isConfigDone: true,
+      uploadedFilesList: ["dental_procedures.pdf", "clinic_faqs.pdf"],
+      ingestedUrlsList: ["https://delhidentalclinic.in"],
+      messages: [
+        { id: "1", role: "assistant", content: "Namaste! Welcome to VoiceClaw. I'm your onboarding assistant. Let's build your live voice agent in just a few quick steps! To start off, what is the name of your business?" },
+        { id: "2", role: "user", content: "Delhi Dental Clinic" },
+        { id: "3", role: "assistant", content: "Great! What kind of business is Delhi Dental Clinic?" },
+        { id: "4", role: "user", content: "It's a dental clinic in Delhi." },
+        { id: "5", role: "assistant", content: "Understood. What language do your patients usually speak?" },
+        { id: "6", role: "user", content: "Hindi and English" },
+        { id: "7", role: "assistant", content: "Perfect. What are the top 3 things your patients ask about?" },
+        { id: "8", role: "user", content: "Appointment booking, timings, and insurance" },
+        { id: "9", role: "assistant", content: "Got it. How would you like the agent to greet them?" },
+        { id: "10", role: "user", content: "Namaste, welcome to Delhi Dental Clinic. How can I help you book an appointment today?" },
+        { id: "11", role: "assistant", content: "Excellent. Are there any guardrails or restrictions for the agent?" },
+        { id: "12", role: "user", content: "Never give medical advice, and do not mention pricing for surgeries." },
+        { id: "13", role: "assistant", content: "<config>\n{\n  \"business_name\": \"Delhi Dental Clinic\",\n  \"business_type\": \"Dental Clinic\",\n  \"primary_language\": \"Hindi & English\",\n  \"top_faqs\": [\"How to book an appointment?\", \"What are the timings?\", \"Do you accept insurance?\"],\n  \"greeting\": \"Namaste, welcome to Delhi Dental Clinic. How can I help you book an appointment today?\",\n  \"restrictions\": \"Never give medical advice. Do not mention pricing for surgeries.\"\n}\n</config>\nBased on your clinic, I recommend connecting Google Calendar. Would you like to enable it?" }
+      ]
+    },
+    {
+      id: "mumbai-cafe",
+      businessName: "Mumbai Cafe Bistro",
+      businessType: "Restaurant / Cafe",
+      primaryLanguage: "English & Marathi",
+      greeting: "Hello, welcome to Mumbai Cafe Bistro! What would you like to order today?",
+      topFaqs: ["What is on the menu?", "Do you offer delivery?", "Are you open on weekends?"],
+      restrictions: "Do not take bookings for parties larger than 10 people without manager approval.",
+      date: "Jun 13, 2026",
+      isConfigDone: true,
+      uploadedFilesList: ["menu_summer2026.pdf"],
+      ingestedUrlsList: ["https://mumbaicafe.com/menu"],
+      messages: [
+        { id: "1", role: "assistant", content: "Namaste! Welcome to VoiceClaw. I'm your onboarding assistant. Let's build your live voice agent in just a few quick steps! To start off, what is the name of your business?" },
+        { id: "2", role: "user", content: "Mumbai Cafe Bistro" },
+        { id: "3", role: "assistant", content: "Great! What kind of business is Mumbai Cafe Bistro?" },
+        { id: "4", role: "user", content: "It's a restaurant / cafe" },
+        { id: "5", role: "assistant", content: "Understood. What language do your customers usually speak?" },
+        { id: "6", role: "user", content: "English and Marathi" },
+        { id: "7", role: "assistant", content: "Perfect. What are the top 3 things customers ask about?" },
+        { id: "8", role: "user", content: "Menu items, delivery, and weekend hours" },
+        { id: "9", role: "assistant", content: "Got it. How would you like the agent to greet them?" },
+        { id: "10", role: "user", content: "Hello, welcome to Mumbai Cafe Bistro! What would you like to order today?" },
+        { id: "11", role: "assistant", content: "Excellent. Are there any restrictions?" },
+        { id: "12", role: "user", content: "Do not take bookings for parties larger than 10 people without manager approval." },
+        { id: "13", role: "assistant", content: "<config>\n{\n  \"business_name\": \"Mumbai Cafe Bistro\",\n  \"business_type\": \"Restaurant / Cafe\",\n  \"primary_language\": \"English & Marathi\",\n  \"top_faqs\": [\"What is on the menu?\", \"Do you offer delivery?\", \"Are you open on weekends?\"],\n  \"greeting\": \"Hello, welcome to Mumbai Cafe Bistro! What would you like to order today?\",\n  \"restrictions\": \"Do not take bookings for parties larger than 10 people without manager approval.\"\n}\n</config>\nI recommend connecting Shopify / Catalog for menu ordering. Would you like to enable it?" }
+      ]
+    }
+  ]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  const handleSelectSession = (session: any) => {
+    setActiveSessionId(session.id);
+    setBusinessName(session.businessName);
+    setBusinessType(session.businessType || "");
+    setPrimaryLanguage(session.primaryLanguage || "");
+    setGreeting(session.greeting || "");
+    setTopFaqs(session.topFaqs || []);
+    setRestrictions(session.restrictions || "");
+    setIsConfigDone(session.isConfigDone);
+    setUploadedFilesList(session.uploadedFilesList || []);
+    setIngestedUrlsList(session.ingestedUrlsList || []);
+
+    setChatMessages(session.messages);
+
+    const historyTurns: ConversationTurn[] = session.messages
+      .filter((m: any) => m.role === "user" || m.role === "assistant")
+      .map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content }));
+    setConversationHistory(historyTurns);
+
+    showToast(`Loaded ${session.businessName} session`, "info");
+  };
+
+  const handleStartNewSession = () => {
+    setActiveSessionId(null);
+    setBusinessName("");
+    setBusinessType("");
+    setPrimaryLanguage("");
+    setGreeting("");
+    setTopFaqs([]);
+    setRestrictions("");
+    setIsConfigDone(false);
+    setUploadedFilesList([]);
+    setUploadedResourceIds([]);
+    setIngestedUrlsList([]);
+
+    const initialMsg = "Namaste! Welcome to VoiceClaw. I'm your onboarding assistant. Let's build your live voice agent in just a few quick steps! To start off, what is the name of your business?";
+
+    setChatMessages([
+      {
+        id: `init-${Date.now()}`,
+        role: "assistant",
+        content: initialMsg,
+        type: "text",
+      }
+    ]);
+    setConversationHistory([
+      {
+        role: "assistant",
+        content: initialMsg
+      }
+    ]);
+
+    showToast("Started a new onboarding session", "success");
+  };
 
   // Integrations / Connectors state
   const [isCalendarConnected, setIsCalendarConnected] = useState(false);
@@ -1235,26 +1354,25 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
       {!isAgentViewState && (
         <div
           id="page-builder"
-          className="w-full min-h-screen flex flex-col justify-between py-6 px-4 bg-slate-50 font-sans"
+          className="w-full min-h-screen flex flex-col justify-between py-6 px-4 bg-transparent font-sans"
         >
           <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col">
             {/* Header */}
-            <header className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4 shrink-0">
+            <header className="glass-panel mb-6 flex items-center justify-between px-6 py-4 rounded-2xl shrink-0">
               <div className="flex items-center gap-3">
-                <div className="bg-slate-900 text-white p-2 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-amber-300" />
+                <div className="bg-slate-900 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md">
+                  <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                  <h1 className="text-xl font-black text-slate-950 tracking-tight">
                     VoiceClaw
                   </h1>
-                  <p className="text-xs text-slate-500">
-                    Deploy automated telephone receptionists with live
-                    conversational setup
+                  <p className="text-xs text-slate-600 font-medium">
+                    Deploy automated telephone receptionists with live conversational setup
                   </p>
                 </div>
               </div>
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-[#0c0c0c] bg-slate-200 px-3 py-1 rounded-full">
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest text-indigo-700 bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-full shadow-sm">
                 No-code Platform v2.0
               </span>
             </header>
@@ -1300,26 +1418,107 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
             {/* Main 10-column grid */}
             <div className="grid grid-cols-1 md:grid-cols-10 gap-6 flex-1 min-h-0">
 
-              {/* ── CHAT WINDOW (6 cols / 60%) ──────────────────────────────── */}
+              {/* ── CHAT HISTORY SIDEBAR (2 cols / 20%) ───────────────────────── */}
+              {isHistorySidebarExpanded && (
+                <div
+                  id="history-sidebar"
+                  className="col-span-1 md:col-span-2 glass-panel rounded-2xl flex flex-col shadow-sm h-[680px] overflow-hidden"
+                >
+                  {/* Sidebar Header */}
+                  <div className="px-4 py-4 border-b border-white/40 bg-white/30 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2">
+                      <History className="w-4 h-4 text-indigo-600" />
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        Sessions
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleStartNewSession}
+                      title="New Session"
+                      className="p-1.5 hover:bg-slate-200/50 rounded-lg text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Sessions List */}
+                  <div className="flex-grow overflow-y-auto p-3 space-y-2">
+                    <button
+                      onClick={handleStartNewSession}
+                      className={`w-full text-left p-3 rounded-xl border transition-all text-xs font-semibold flex items-center gap-2 cursor-pointer ${
+                        !activeSessionId
+                          ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                          : "bg-white/40 border-transparent hover:bg-white/70 text-slate-700"
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Current Session</span>
+                    </button>
+
+                    <div className="pt-2">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">
+                        Recent Sessions
+                      </p>
+                      <div className="space-y-1.5">
+                        {chatSessions.map((session) => (
+                          <button
+                            key={session.id}
+                            onClick={() => handleSelectSession(session)}
+                            className={`w-full text-left p-2.5 rounded-xl border transition-all text-xs flex flex-col gap-1 cursor-pointer ${
+                              activeSessionId === session.id
+                                ? "bg-indigo-50 border-indigo-200 text-indigo-900 font-semibold"
+                                : "bg-white/40 border-transparent hover:bg-white/70 text-slate-600"
+                            }`}
+                          >
+                            <span className="truncate">{session.businessName}</span>
+                            <span className="text-[9px] text-slate-400 font-normal">
+                              {session.date}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sidebar footer */}
+                  <div className="p-3 border-t border-white/40 bg-white/20 text-[10px] text-slate-400 font-medium text-center shrink-0">
+                    VoiceClaw Sessions
+                  </div>
+                </div>
+              )}
+
+              {/* ── CHAT WINDOW (5 or 7 cols) ──────────────────────────────── */}
               <div
                 id="chat-window-pane"
-                className="col-span-1 md:col-span-6 bg-white border border-slate-200 rounded-2xl flex flex-col shadow-sm h-[680px] overflow-hidden"
+                className={`col-span-1 ${
+                  isHistorySidebarExpanded ? "md:col-span-5" : "md:col-span-7"
+                } glass-panel rounded-2xl flex flex-col shadow-sm h-[680px] overflow-hidden`}
               >
                 {/* Chat header */}
-                <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-                    <span className="text-sm font-semibold text-slate-800">
-                      Agent Configuration Assistant
-                    </span>
+                <div className="px-5 py-4 border-b border-white/40 bg-white/30 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    {/* Toggle button */}
+                    <button
+                      onClick={() => setIsHistorySidebarExpanded(!isHistorySidebarExpanded)}
+                      title={isHistorySidebarExpanded ? "Hide History" : "Show History"}
+                      className="p-2 bg-white/80 hover:bg-white border border-slate-200/50 hover:border-slate-300 rounded-lg text-slate-600 hover:text-indigo-600 transition-all cursor-pointer shadow-sm"
+                    >
+                      <Menu className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
+                      <span className="text-sm font-semibold text-slate-800">
+                        {activeSessionId ? "Loaded Agent Configuration" : "Agent Configuration Assistant"}
+                      </span>
+                    </div>
                   </div>
                   <span className="text-xs font-mono text-slate-400">
-                    Live setup connection
+                    {activeSessionId ? "View-Only" : "Live setup"}
                   </span>
                 </div>
 
                 {/* Messages stream */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/40 select-text">
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-transparent select-text">
                   {chatMessages.map((msg) => {
                     // ── User bubble ────────────────────────────────────────────
                     if (msg.role === "user") {
@@ -1656,10 +1855,10 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
               {/* ── RIGHT PANEL: CONNECTORS & INTEGRATIONS ──────────────── */}
               <div
                 id="connectors-panel"
-                className="hidden md:flex md:col-span-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex-col h-[680px] overflow-hidden"
+                className="hidden md:flex md:col-span-3 glass-panel rounded-2xl shadow-sm flex-col h-[680px] overflow-hidden"
               >
                 {/* Panel Header */}
-                <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-4 shrink-0">
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-5 py-4 shrink-0 border-b border-white/10">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center shrink-0">
                       <Sliders className="w-4.5 h-4.5 text-white" />
@@ -1668,7 +1867,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                       <h3 className="text-sm font-bold text-white tracking-tight">
                         Connectors & Tools
                       </h3>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                      <p className="text-[10px] text-slate-300 font-medium uppercase tracking-wider mt-0.5">
                         Integrate your business stack
                       </p>
                     </div>
@@ -1679,7 +1878,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                 <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
 
                   {/* ─── Google Calendar ────────────────────────────────────── */}
-                  <div className={`rounded-xl border transition-all duration-200 ${isCalendarConnected ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <div className={`rounded-xl border transition-all duration-200 ${isCalendarConnected ? 'border-emerald-200 bg-emerald-500/10' : 'border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60'}`}>
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isCalendarConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -1724,7 +1923,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                   </div>
 
                   {/* ─── WhatsApp / Twilio ──────────────────────────────────── */}
-                  <div className={`rounded-xl border transition-all duration-200 ${isTwilioConnected ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <div className={`rounded-xl border transition-all duration-200 ${isTwilioConnected ? 'border-emerald-200 bg-emerald-500/10' : 'border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60'}`}>
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isTwilioConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -1768,7 +1967,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                   </div>
 
                   {/* ─── Shopify / Catalog ──────────────────────────────────── */}
-                  <div className={`rounded-xl border transition-all duration-200 ${isShopifyConnected ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <div className={`rounded-xl border transition-all duration-200 ${isShopifyConnected ? 'border-emerald-200 bg-emerald-500/10' : 'border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60'}`}>
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isShopifyConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -1812,7 +2011,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                   </div>
 
                   {/* ─── HubSpot / CRM ─────────────────────────────────────── */}
-                  <div className={`rounded-xl border transition-all duration-200 ${isHubspotConnected ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                  <div className={`rounded-xl border transition-all duration-200 ${isHubspotConnected ? 'border-emerald-200 bg-emerald-500/10' : 'border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60'}`}>
                     <div className="flex items-center justify-between px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isHubspotConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
@@ -1859,7 +2058,7 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
                   {customIntegrations.map((integration) => {
                     const isExpanded = showConfigFor === integration.id;
                     return (
-                      <div key={integration.id} className={`rounded-xl border transition-all duration-200 ${integration.isConnected ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                      <div key={integration.id} className={`rounded-xl border transition-all duration-200 ${integration.isConnected ? 'border-emerald-200 bg-emerald-500/10' : 'border-white/40 bg-white/40 hover:bg-white/60 hover:border-white/60'}`}>
                         <div className="flex items-center justify-between px-4 py-3.5">
                           <div className="flex items-center gap-3">
                             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${integration.isConnected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
