@@ -144,7 +144,7 @@ app.post("/api/chat", async (req, res) => {
 
   // 3. Gemini / Gemma fallback (with retry + model fallback for rate limits)
   const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) {
+  if (geminiKey && geminiKey.startsWith("AIzaSy")) {
     const { GoogleGenAI } = await import("@google/genai");
     const ai = new GoogleGenAI({
       apiKey: geminiKey,

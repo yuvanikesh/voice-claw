@@ -178,7 +178,7 @@ async def query_knowledge_base(agent_id: str, query_text: str, history: list[dic
             except Exception as e:
                 logger.warning(f"Groq RAG failed, falling back: {e}")
 
-        if settings.GEMINI_API_KEY:
+        if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.startswith("AIzaSy"):
             try:
                 logger.info(f"Submitting RAG query via Gemini for agent {agent_id}")
                 return await _query_via_gemini(system_prompt, messages, query_text)
