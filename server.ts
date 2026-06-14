@@ -69,6 +69,8 @@ app.post("/api/chat", async (req, res) => {
     return res.status(400).json({ error: "messages array is required" });
   }
 
+  const errors: string[] = [];
+
   // 1. Try primary LLM API (Anthropic) if key is available
   const aiApiKey = process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY;
   const aiModel = process.env.AI_MODEL || "claude-3-5-sonnet-20241022";
@@ -96,9 +98,11 @@ app.post("/api/chat", async (req, res) => {
       } else {
         const statusText = await response.text();
         console.warn(`[AI Proxy] Primary LLM returned ${response.status}: ${statusText}`);
+        errors.push(`Primary LLM (Anthropic) returned status ${response.status}: ${statusText}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("[AI Proxy] Primary LLM connection error:", e);
+      errors.push(`Primary LLM (Anthropic) error: ${e?.message || e}`);
     }
   }
 
@@ -136,9 +140,11 @@ app.post("/api/chat", async (req, res) => {
       } else {
         const errText = await groqRes.text();
         console.warn(`[AI Proxy] Groq returned ${groqRes.status}: ${errText.slice(0, 150)}`);
+        errors.push(`Groq returned status ${groqRes.status}: ${errText.slice(0, 150)}`);
       }
     } catch (err: any) {
       console.error("[AI Proxy] Groq connection error:", err?.message || err);
+      errors.push(`Groq error: ${err?.message || err}`);
     }
   }
 
@@ -158,6 +164,7 @@ app.post("/api/chat", async (req, res) => {
 
     // Try multiple models in case of quota exhaustion
     const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemma-4-31b-it", "gemma-4-26b-a4b-it"];
+    let geminiErrMessage = "";
     for (const model of models) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
@@ -173,6 +180,7 @@ app.post("/api/chat", async (req, res) => {
           });
         } catch (err: any) {
           const errStr = String(err?.message || err || "");
+          geminiErrMessage = errStr;
           const isRateLimit = errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || err?.status === 429;
           if (isRateLimit && attempt === 0) {
             console.warn(`[AI Proxy] Rate limited on ${model}, retrying in 3s...`);
@@ -184,6 +192,7 @@ app.post("/api/chat", async (req, res) => {
         }
       }
     }
+    errors.push(`Gemini API failed: ${geminiErrMessage}`);
   }
 
   // 3. Sarvam LLM fallback (when Gemini quota is exhausted)
@@ -230,13 +239,23 @@ app.post("/api/chat", async (req, res) => {
       } else {
         const errText = await sarvamRes.text();
         console.error(`[AI Proxy] Sarvam returned ${sarvamRes.status}: ${errText}`);
+        errors.push(`Sarvam returned status ${sarvamRes.status}: ${errText}`);
       }
     } catch (err: any) {
       console.error("[AI Proxy] Sarvam error:", err?.message || err);
+      errors.push(`Sarvam error: ${err?.message || err}`);
     }
   }
 
-  return res.status(429).json({ error: "All AI models are rate-limited. Please try again in a minute." });
+  if (errors.length > 0) {
+    return res.status(502).json({
+      error: `All AI fallbacks failed:\n${errors.map((e, idx) => `${idx + 1}. ${e}`).join("\n")}`
+    });
+  }
+
+  return res.status(400).json({
+    error: "No AI keys configured. Please set one of the following environment variables: GEMINI_API_KEY, SARVAM_API_KEY, GROQ_API_KEY, or ANTHROPIC_API_KEY."
+  });
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

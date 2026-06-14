@@ -588,7 +588,16 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
         }),
       });
 
-      if (!response.ok) throw new Error("Proxy response failed");
+      if (!response.ok) {
+        let errMsg = "Proxy response failed";
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = typeof errData.error === "string" ? errData.error : JSON.stringify(errData.error);
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
       const data = await response.json();
       const rawText = data.content?.[0]?.text || "";
 
@@ -642,9 +651,9 @@ Keep every message under 2 sentences. Be warm and conversational. Use simple Eng
         setIsConfigDone(true);
         setTimeout(() => injectUploadWidget(), 1200);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("I'm having trouble responding right now. Let me try again.", "error");
+      showToast(e.message || "I'm having trouble responding right now. Let me try again.", "error");
     } finally {
       setIsAiTyping(false);
     }
