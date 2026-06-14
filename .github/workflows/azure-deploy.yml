@@ -19,6 +19,17 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Verify Secret Presence
+        run: |
+          if [ -z "$SECRET_VAL" ]; then
+            echo "::error::The AZURE_CREDENTIALS secret is NOT found or is empty. Please check that it is defined under Settings -> Secrets and variables -> Actions as a Repository Secret."
+            exit 1
+          else
+            echo "AZURE_CREDENTIALS secret is found and populated."
+          fi
+        env:
+          SECRET_VAL: ${{ secrets.AZURE_CREDENTIALS }}
+
       # 1. Log in to Azure CLI using a Service Principal secret
       - name: Azure Login
         uses: azure/login@v2
